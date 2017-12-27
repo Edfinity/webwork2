@@ -172,7 +172,7 @@ var LiveGraphics3D = function (container, options) {
 	drawLines();
 	drawLonePoints();
 	drawLoneLabels();
-
+  x3dom.reload();
     };
 
     var parseLive3DData = function(text) {
