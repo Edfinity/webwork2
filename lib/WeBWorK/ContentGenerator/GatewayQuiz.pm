@@ -323,6 +323,13 @@ sub can_useMathView {
     return $ce->{pg}->{specialPGEnvironmentVars}->{MathView};
 }
 
+sub can_useWirisEditor {
+    my ($self, $User, $EffectiveUser, $Set, $Problem, $submitAnswers) = @_;
+    my $ce= $self->r->ce;
+
+    return $ce->{pg}->{specialPGEnvironmentVars}->{WirisEditor};
+}
+
 ################################################################################
 # output utilities
 ################################################################################
@@ -1101,6 +1108,7 @@ sub pre_header_initialize {
 	#    switching between pages
 	     checkAnswers       => $checkAnswers,
 	     useMathView        => $User->useMathView ne '' ? $User->useMathView : $ce->{pg}->{options}->{useMathView},
+	     useWirisEditor     => $User->useWirisEditor ne '' ? $User->useWirisEditor : $ce->{pg}->{options}->{useWirisEditor},
 	     );
 
 	# are certain options enforced?
@@ -1112,6 +1120,7 @@ sub pre_header_initialize {
 	     recordAnswers      => 0,
 	     checkAnswers       => 0,
 	     useMathView        => 0,
+	     useWirisEditor     => 0,
 	     );
 
 	# does the user have permission to use certain options?
@@ -1128,7 +1137,8 @@ sub pre_header_initialize {
 	     recordAnswersNextTime => $self->can_recordAnswers(@args, $sAns),
 	     checkAnswersNextTime  => $self->can_checkAnswers(@args, $sAns),
 	     showScore          => $self->can_showScore(@args),
-	     useMathView              => $self->can_useMathView(@args)
+	     useMathView              => $self->can_useMathView(@args),
+	     useWirisEditor           => $self->can_useWirisEditor(@args)
 	     );
 
 	# final values for options
@@ -1528,7 +1538,7 @@ sub body {
 					# ref($pg) eq "WeBWorK::PG::Local";
 			} else {
 				my $prefix = sprintf('Q%04d_',$i+1);
-				my @fields = sort grep {/^$prefix/} (keys %{$self->{formFields}});
+				my @fields = sort grep {/^(?!previous).*$prefix/} (keys %{$self->{formFields}});
 				my %answersToStore = map {$_ => $self->{formFields}->{$_}} @fields;
 				my @answer_order = @fields;
 				$encoded_ans_string = encodeAnswers( %answersToStore, 
@@ -1657,7 +1667,7 @@ sub body {
 					$answerString =~ s/\t+$/\t/;
 				} else {
 					my $prefix = sprintf('Q%04d_', ($probOrder[$i]+1));
-					my @fields = sort grep {/^$prefix/} (keys %{$self->{formFields}});
+					my @fields = sort grep {/^(?!previous).*$prefix/} (keys %{$self->{formFields}});
 					foreach ( @fields ) {
 						$answerString .= $self->{formFields}->{$_} . "\t";
 						$scores .= $self->{formFields}->{"probstatus" . ($probOrder[$i]+1)} >= 1 ? "1" : "0" if ( $submitAnswers );
@@ -2180,7 +2190,7 @@ sub body {
 				# and print out hidden fields with the current 
 				#    last answers
 				my $curr_prefix = 'Q' . sprintf("%04d", $probOrder[$i]+1) . '_';
-				my @curr_fields = grep /^$curr_prefix/, keys %{$self->{formFields}};
+				my @curr_fields = grep {/^(?!previous).*$curr_prefix/} keys %{$self->{formFields}};
 				foreach my $curr_field ( @curr_fields ) {
  					foreach ( split(/\0/, $self->{formFields}->{$curr_field} // '') ) {
  						print CGI::hidden({-name=>$curr_field, 
@@ -2395,6 +2405,13 @@ sub output_JS{
 	    } else {
 		warn ("MathJax must be installed and enabled as a display mode for the math viewer to work");
 	    }
+	}
+
+	# WIRIS EDITOR
+	if ($self->{will}->{useWirisEditor}) {
+		print CGI::start_script({type=>"text/javascript", src=>"$site_url/js/apps/WirisEditor/quizzes.js"}), CGI::end_script();
+		print CGI::start_script({type=>"text/javascript", src=>"$site_url/js/apps/WirisEditor/wiriseditor.js"}), CGI::end_script();
+		print CGI::start_script({type=>"text/javascript", src=>"$site_url/js/apps/WirisEditor/mathml2webwork.js"}), CGI::end_script();
 	}
 
 	print CGI::start_script({type=>"text/javascript", src=>"$site_url/js/vendor/other/knowl.js"}),CGI::end_script();
