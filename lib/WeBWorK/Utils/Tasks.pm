@@ -1,6 +1,6 @@
 ################################################################################
 # WeBWorK Online Homework Delivery System
-# Copyright © 2000-2007 The WeBWorK Project, http://openwebwork.sf.net/
+# Copyright &copy; 2000-2018 The WeBWorK Project, http://openwebwork.sf.net/
 # 
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of either: (a) the GNU General Public License as published by the
@@ -147,7 +147,7 @@ sub fake_problem {
 	$problem->last_answer(""); 
 	$problem->num_correct(1000); 
 	$problem->num_incorrect(1000); 
-	$problem->prCount(0);
+	$problem->prCount(-10); # Negative to detect fake problems and disable problem randomization.
 
 	#for my $key (keys(%{$problem})){
 	#	my $value = '####UNDEF###';
