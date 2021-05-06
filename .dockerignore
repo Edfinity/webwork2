@@ -5,6 +5,6 @@ htdocs/tmp/*
 htdocs/DATA/library*.json
 htdocs/DATA/tagging-taxonomy.json
 htdocs/DATA/textbooks-tree.json
-.git
-.data
-.idea
+**/.git
+**/.data
+**/.idea

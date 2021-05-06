@@ -1,82 +1,5 @@
-
-# Optional things to change/configure below:
-#
-# 1. Which branch of webwork2/ and pg/ to install.
-#
-# 2. Installing the OPL in the Docker image itself.
-#    (almost 850MB: 290+MB for the main OPL, 90+MB for Pending, 460+MB for Contrib)
-#
-#    By default this is NOT done, and it will instead be installed in
-#    a named Docker storage volume when the container is first started.
-#
-#    Note: For typical use, we recommend that the OPL be either mounted from
-#    a local directory on the source or from a separate named data volume.
-#    That approach precludes needing to download the OPL for each update to
-#    the Docker image, and allows it to be easily upgraded using git in its
-#    persistent location.
-#
-# 3. Some things should be handled by setting environment variables which
-#    take effect at container startup. They can usually be set in
-#    docker-compose.yml.
-#
-#        SSL=1
-#          will turn on SSL at startup
-#        ADD_LOCALES="locale1,locale2,locale3"
-#          will build these locales at startup
-#        PAPERSIZE=a4
-#          will set the system papersize to A4
-#        SYSTEM_TIMEZONE=zone/city
-#          will set the system timezone to zone/city
-#          Make sure to use a valid setting.
-#          "/usr/bin/timedatectl list-timezones" on Ubuntu will find valid values
-#        ADD_APT_PACKAGES="package1 package2 package3"
-#	   will have these additional Ubuntu packages installed at startup.
-#
-# ==================================================================
-
-# Phase 1 - download some Git repos for later use:
-# as suggested by Nelson Moller in https://gist.github.com/nmoller/81bd8e149e6aa2a7cf051e0bf248b2e2
-
-FROM alpine/git AS base
-
-# build args specifying the branches for webwork2 and pg used to build the image
-
-# To use the master branches of webwork2 and pg 
-ARG WEBWORK2_GIT_URL=https://github.com/Edfinity/webwork2.git
-ARG WEBWORK2_BRANCH=edfinity-docker
-ARG PG_GIT_URL=https://github.com/Edfinity/pg.git
-ARG PG_BRANCH=master
-
-# assign the build args to the ENV variables
-ENV WEBWORK2_GIT_URL_ENV ${WEBWORK2_GIT_URL}
-ENV WEBWORK2_BRANCH_ENV ${WEBWORK2_BRANCH}
-ENV PG_GIT_URL_ENV ${PG_GIT_URL}
-ENV PG_BRANCH_ENV ${PG_BRANCH}
-
-WORKDIR /opt/base
-
-RUN echo Cloning branch $WEBWORK2_BRANCH_ENV from $WEBWORK2_GIT_URL_ENV \
-  && echo git clone --single-branch --branch ${WEBWORK2_BRANCH_ENV} --depth 1 $WEBWORK2_GIT_URL_ENV \
-  && git clone --single-branch --branch ${WEBWORK2_BRANCH_ENV} --depth 1 $WEBWORK2_GIT_URL_ENV \
-  && rm -rf webwork2/.git webwork2/{*ignore,Dockerfile,docker-compose.yml,docker-config}
-
-RUN echo Cloning branch $PG_BRANCH_ENV branch from $PG_GIT_URL_ENV \
-  && echo git clone --single-branch --branch ${PG_BRANCH_ENV} --depth 1 $PG_GIT_URL_ENV \
-  && git clone --single-branch --branch ${PG_BRANCH_ENV} --depth 1 $PG_GIT_URL_ENV \
-  && rm -rf  pg/.git
-
-RUN git clone --single-branch --branch legacy-v2 --depth 1 https://github.com/mathjax/MathJax \
-  && rm -rf MathJax/.git
-
-# Optional - include OPL (also need to uncomment further below when an included OPL is desired):
-#RUN git clone --single-branch --branch master --depth 1 https://github.com/openwebwork/webwork-open-problem-library.git \
-#  && rm -rf  webwork-open-problem-library/.git
-
-# ==================================================================
-
-# Phase 2 - set ENV variables
-
-# we need to change FROM before setting the ENV variables
+# NOTE --> build this with docker-build.sh and see instructions therein for
+# checking out pg and MathJax dependencies ^_^
 
 FROM ubuntu:18.04
 
@@ -98,26 +21,13 @@ ENV WEBWORK_URL=/webwork2 \
     DEBCONF_NONINTERACTIVE_SEEN=true \
     DEV=0
 
-# Environment variables which depend on a prior environment variable must be set
-# in an ENV call after the dependencies were defined.
+WORKDIR $APP_ROOT
+
 ENV WEBWORK_ROOT=$APP_ROOT/webwork2 \
     PG_ROOT=$APP_ROOT/pg \
     PATH=$PATH:$APP_ROOT/webwork2/bin
 
 # ==================================================================
-
-# Phase 3 - Ubuntu 18.04 base image + required packages
-
-# Packages changes/added for ubuntu 18.04:
-
-# For ubuntu 18.04 libemail-address-xs-perl installed from Ubuntu, for 16.04 it would be installed using cpamn
-#
-#    texlive-generic-recommended # For ubuntu 16.04 - contains path.sty
-#    texlive-plain-generic       # For ubuntu 18.04 - contains path.sty
-
-# Do NOT include "apt-get -y upgrade"
-# see: https://docs.docker.com/develop/develop-images/dockerfile_best-practices/
-
 RUN apt-get update \
     && apt-get install -y --no-install-recommends --no-install-suggests \
 	apache2 \
@@ -218,33 +128,15 @@ RUN apt-get update \
     && apt-get clean \
     && rm -fr /var/lib/apt/lists/* /tmp/*
 
-# Developers may want to add additional packages inside the image
-# such as: telnet vimvim mc file
+RUN cpanm install Statistics::R::IO \
+  && rm -fr ./cpanm /root/.cpanm
 
 # ==================================================================
+RUN mkdir -p $APP_ROOT/courses $APP_ROOT/libraries $APP_ROOT/libraries/webwork-open-problem-library /www/www/html
 
-# Phase 4 - Install webwork2, pg, MathJaX which were downloaded to /opt/base/ in phase 1
-#   Option: Install the OPL in the image also (about 850 MB)
-
-RUN mkdir -p $APP_ROOT/courses $APP_ROOT/libraries $APP_ROOT/libraries/webwork-open-problem-library $APP_ROOT/webwork2 /www/www/html
-
-COPY --from=base /opt/base/webwork2 $APP_ROOT/webwork2
-COPY --from=base /opt/base/pg $APP_ROOT/pg
-COPY --from=base /opt/base/MathJax $APP_ROOT/MathJax
-
-# Optional - include OPL (also need to uncomment above to clone from GitHub when needed):
-# ??? could/should this include the main OPL = /opt/base/webwork-open-problem-library/OpenProblemLibrary and not Contrib and Pending ???
-#COPY --from=base /opt/base/webwork-open-problem-library $APP_ROOT/libraries/webwork-open-problem-library
-
+# see docker-build.sh for running, this should be run from a parent directory with pg and MathJax checked out
+COPY . ./
 # ==================================================================
-
-# Phase 5 - some configuration work
-
-# 1. Setup PATH.
-# 2. Compiles color.c in the copy INSIDE the image, will also be done in docker-entrypoint.sh for externally mounted locations.
-# 3. Some chown/chmod for material INSIDE the image.
-# 4. Build some standard locales.
-# 5. Set the default system timezone to be UTC.
 
 RUN echo "PATH=$PATH:$APP_ROOT/webwork2/bin" >> /root/.bashrc \
     && cd $APP_ROOT/pg/lib/chromatic && gcc color.c -o color  \
@@ -258,41 +150,20 @@ RUN echo "PATH=$PATH:$APP_ROOT/webwork2/bin" >> /root/.bashrc \
     && rm /etc/localtime /etc/timezone && echo "Etc/UTC" > /etc/timezone \
       &&   dpkg-reconfigure -f noninteractive tzdata
 
-# These lines were moved into docker-entrypoint.sh so the bind mount of courses will be available
-#RUN cd $APP_ROOT/webwork2/courses.dist \
-#    && cp *.lst $APP_ROOT/courses/ \
-#    && cp -R modelCourse $APP_ROOT/courses/
+ENV SSL=0 \
+    PAPERSIZE=letter \
+    SYSTEM_TIMEZONE=UTC \
+    ADD_LOCALES=0 \
+    ADD_APT_PACKAGES=0
 
-# ==================================================================
-
-# Phase 6 - install additional Perl modules from CPAN (not packaged for Ubuntu or outdated in Ubuntu)
-
-RUN cpanm install Statistics::R::IO \
-    && rm -fr ./cpanm /root/.cpanm /tmp/*
-
-# Now installed from Ubuntu packages:
-#     XML::Parser::EasyTree Iterator Iterator::Util Pod::WSDL Array::Utils HTML::Template Mail::Sender Email::Sender::Simple Data::Dump
-# For Ubuntu 16.04 would also need:
-#     Email::Address::XS
-
-# ==================================================================
-
-# Phase 7 - setup apache
-
-# Note we always create the /etc/ssl/local directory in case it will be needed, as
-# the SSL config can also be done via a modified docker-entrypoint.sh script.
-
-# Always provide the dummy default-ssl.conf file:
-COPY docker-config/ssl/default-ssl.conf /etc/apache2/sites-available/default-ssl.conf
-
-# However SSL will only be enabled at container startup via docker-entrypoint.sh.
+COPY ./webwork2/docker-config/ssl/default-ssl.conf /etc/apache2/sites-available/default-ssl.conf
 
 RUN cd $APP_ROOT/webwork2/conf \
     && cp webwork.apache2.4-config.dist webwork.apache2.4-config \
     && cp $APP_ROOT/webwork2/conf/webwork.apache2.4-config /etc/apache2/conf-enabled/webwork.conf \
     && a2dismod mpm_event \
     && a2enmod mpm_prefork \
-    && sed -i -e 's/Timeout 300/Timeout 1200/' /etc/apache2/apache2.conf \
+    && sed -i -e 's/Timeout 300/Timeout 10/' /etc/apache2/apache2.conf \
     && sed -i -e 's/MaxRequestWorkers     150/MaxRequestWorkers     20/' \
 	  -e 's/MaxConnectionsPerChild   0/MaxConnectionsPerChild   100/' \
 	  /etc/apache2/mods-available/mpm_prefork.conf \
@@ -311,35 +182,8 @@ RUN cd $APP_ROOT/webwork2/conf \
 	PerlPassEnv WEBWORK_TIMEZONE\n\
 	\n<Perl>/' /etc/apache2/conf-enabled/webwork.conf
 
-EXPOSE 80
-WORKDIR $APP_ROOT
-
-# Enabling SSL is NOT done here.
-# Instead it is done by docker-entrypoint.sh at container startup when SSL=1
-#     is set in the environment, for example by docker-compose.yml.
-#RUN a2enmod ssl && a2ensite default-ssl
-#EXPOSE 443
-
-# ==================================================================
-
-# Phase 8 - prepare docker-entrypoint.sh
-# Done near the end, so that an update to docker-entrypoint.sh can be
-# done without rebuilding the earlier layers of the Docker image.
-
-COPY docker-config/docker-entrypoint.sh /usr/local/bin/
-
 ENTRYPOINT ["docker-entrypoint.sh"]
 
-# ==================================================================
-
-# Add enviroment variables to control some things during container startup
-
-ENV SSL=0 \
-    PAPERSIZE=letter \
-    SYSTEM_TIMEZONE=UTC \
-    ADD_LOCALES=0 \
-    ADD_APT_PACKAGES=0
-
 # ================================================
-
+EXPOSE 80
 CMD ["apache2", "-DFOREGROUND"]
