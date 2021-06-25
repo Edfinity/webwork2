@@ -81,10 +81,12 @@ services:
       # ======================================================================
 
       # By default the OPL is stored in a named Docker storage volume:
-      - oplVolume:/opt/webwork/libraries/webwork-open-problem-library
+      # - oplVolume:/opt/webwork/libraries/webwork-open-problem-library
       #
       # as an alternative, you can comment out the prior option and uncomment the line below to use a local directory containing the OPL
-      #- "/path_to/webwork-open-problem-library:/opt/webwork/libraries/webwork-open-problem-library"
+      #
+      # Using Edfinity OPL clone and other custom libs here:
+      - "${LIBRARIES_DIRECTORY_ON_HOST}:/opt/webwork/libraries"
 
       # ======================================================================
 
