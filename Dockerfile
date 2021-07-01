@@ -42,9 +42,9 @@ FROM alpine/git AS base
 # build args specifying the branches for webwork2 and pg used to build the image
 
 # To use the master branches of webwork2 and pg 
-ARG WEBWORK2_GIT_URL=https://github.com/openwebwork/webwork2.git
-ARG WEBWORK2_BRANCH=master
-ARG PG_GIT_URL=https://github.com/openwebwork/pg.git
+ARG WEBWORK2_GIT_URL=https://github.com/Edfinity/webwork2.git
+ARG WEBWORK2_BRANCH=edfinity-docker
+ARG PG_GIT_URL=https://github.com/Edfinity/pg.git
 ARG PG_BRANCH=master
 
 # assign the build args to the ENV variables
