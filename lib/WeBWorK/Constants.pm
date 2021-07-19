@@ -72,7 +72,7 @@ $WeBWorK::ContentGenerator::Hardcopy::PreserveTempFiles = 0;
 # The maximum amount of time (in seconds) to work on a single problem.
 # At the end of this time a timeout message is sent to the browser.
 
-$WeBWorK::PG::Local::TIMEOUT = 60;
+$WeBWorK::PG::Local::TIMEOUT = 10;
 
 ################################################################################
 # WeBWorK::PG::ImageGenerator
