@@ -28,7 +28,7 @@ use warnings;
 use Carp;
 use DBI;
 use WeBWorK::Debug;
-use File::Path qw(rmtree);
+use File::Path qw(rmtree make_path);
 use File::Spec;
 use String::ShellQuote;
 use WeBWorK::CourseEnvironment;
@@ -896,7 +896,7 @@ sub unarchiveCourse {
 	# tarball
 	my $tmpDir = $ce2->{courseDirs}->{html_temp};
 	if (! -e $tmpDir) {
-	  mkdir $tmpDir or warn "Failed to create html_temp directory '$tmpDir': $!. You will have to create this directory manually.\n";
+	  make_path $tmpDir or warn "Failed to create html_temp directory '$tmpDir': $!. You will have to create this directory manually.\n";
 	}
 	
 	##### step 6: rename course #####
