@@ -125,6 +125,8 @@ RUN apt-get update \
 	lmodern \
 	zip \
 	jq \
+  openssl \
+  systemd \
     && apt-get clean \
     && rm -fr /var/lib/apt/lists/* /tmp/*
 
