@@ -8,3 +8,4 @@ htdocs/DATA/textbooks-tree.json
 **/.git
 **/.data
 **/.idea
+docker-build
