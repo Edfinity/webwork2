@@ -1,7 +1,7 @@
 # NOTE --> build this with docker-build.sh and see instructions therein for
 # checking out pg and MathJax dependencies ^_^
 
-FROM ubuntu:18.04
+FROM ubuntu:22.04
 
 ENV WEBWORK_URL=/webwork2 \
     WEBWORK_ROOT_URL=http://localhost \
