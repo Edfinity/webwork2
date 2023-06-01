@@ -10,18 +10,15 @@
 # mkdir webwork2-docker
 # mv webwork2 webwork2-docker
 # cd webwork2-docker
-# ./webwork2/docker-build.sh -p -v v99
+# ./webwork2/docker-build -p -v v99
 #
 # Note this will not checkout/pull MathJax or PG if the directories already
 # exist. If so, that's up to you.
 
 require 'optparse'
-require 'awesome_print'
-require 'fileutils'
-require 'open3'
 
 if ARGV.empty?
-  puts "You'll need some args there. Try '-h'."
+  puts "You'll need some args. Try '-h'."
   exit
 end
 
