@@ -59,12 +59,12 @@ end
 
 clone_if_needed('webwork2', 'edfinity-docker', 'https://github.com/Edfinity/webwork2.git')
 clone_if_needed('pg', 'master', 'https://github.com/Edfinity/pg.git')
-clone_if_needed('MathJax', 'legacy-v2', 'https://github.com/mathjax/MathJax"')
+clone_if_needed('MathJax', 'legacy-v2', 'https://github.com/mathjax/MathJax')
 
 repo_tag = "778618701612.dkr.ecr.us-east-1.amazonaws.com/webwork2:#{options[:version]}"
 local_tag = "edfinity/webwork2:#{options[:version]}"
 
-cmd = "docker build -t #{local_tag} -t #{repo_tag} #{options[:clear_cache]} --platform linux/amd64 -f webwork2/Dockerfile ."
+cmd = "docker build -t #{local_tag} -t #{repo_tag} #{options[:clear_cache]} --platform linux/amd64 -f webwork2/Dockerfile.edfinity ."
 system cmd
 
 if options[:push]

@@ -27,19 +27,22 @@ ENV WEBWORK_ROOT=$APP_ROOT/webwork2 \
     PG_ROOT=$APP_ROOT/pg \
     PATH=$PATH:$APP_ROOT/webwork2/bin
 
-# ==================================================================
 RUN apt-get update \
     && apt-get install -y --no-install-recommends --no-install-suggests \
 	apache2 \
 	curl \
 	dvipng \
+	dvisvgm \
 	gcc \
 	libapache2-request-perl \
+	libarchive-zip-perl \
+	libcgi-pm-perl \
 	libcrypt-ssleay-perl \
 	libdatetime-perl \
-	libdancer-perl \
-	libdancer-plugin-database-perl \
+    libdancer-perl \
+    libdancer-plugin-database-perl \
 	libdbd-mysql-perl \
+	libmariadbd-dev \
 	libemail-address-xs-perl \
 	libexception-class-perl \
 	libextutils-xsbuilder-perl \
@@ -58,6 +61,8 @@ RUN apt-get update \
 	libpath-class-perl \
 	libphp-serialization-perl \
 	libxml-simple-perl \
+	libnet-https-nb-perl \
+	libhttp-async-perl \
 	libsoap-lite-perl \
 	libsql-abstract-perl \
 	libstring-shellquote-perl \
@@ -100,9 +105,13 @@ RUN apt-get update \
 	libuniversal-isa-perl \
 	libtest-fatal-perl \
 	libjson-xs-perl \
-	libmoox-options-perl \
+    libmoox-options-perl \
+	libjson-maybexs-perl \
+	libcpanel-json-xs-perl \
 	make \
 	netpbm \
+	patch \
+	pdf2svg \
 	preview-latex-style \
 	texlive \
 	texlive-latex-extra \
@@ -124,13 +133,16 @@ RUN apt-get update \
 	fonts-linuxlibertine \
 	lmodern \
 	zip \
+	iputils-ping \
+	imagemagick \
 	jq \
-  openssl \
-  systemd \
+    openssl \
+    systemd \
+	npm \
     && apt-get clean \
     && rm -fr /var/lib/apt/lists/* /tmp/*
 
-RUN cpanm install Statistics::R::IO \
+RUN cpanm install Devel::CheckLib Statistics::R::IO DBD::MariaDB SQL::Abstract::Classic \
   && rm -fr ./cpanm /root/.cpanm
 
 # ==================================================================
@@ -143,14 +155,16 @@ COPY . ./
 RUN echo "PATH=$PATH:$APP_ROOT/webwork2/bin" >> /root/.bashrc \
     && cd $APP_ROOT/pg/lib/chromatic && gcc color.c -o color  \
     && cd $APP_ROOT/webwork2/ \
-      && chown www-data DATA ../courses  htdocs/applets logs tmp $APP_ROOT/pg/lib/chromatic \
-      && chmod -R u+w DATA ../courses  htdocs/applets logs tmp $APP_ROOT/pg/lib/chromatic   \
+      && chown www-data DATA ../courses  logs tmp $APP_ROOT/pg/lib/chromatic \
+      && chmod -R u+w DATA ../courses logs tmp $APP_ROOT/pg/lib/chromatic   \
     && echo "en_US ISO-8859-1\nen_US.UTF-8 UTF-8" > /etc/locale.gen \
       && /usr/sbin/locale-gen \
       && echo "locales locales/default_environment_locale select en_US.UTF-8\ndebconf debconf/frontend select Noninteractive" > /tmp/preseed.txt \
       && debconf-set-selections /tmp/preseed.txt \
     && rm /etc/localtime /etc/timezone && echo "Etc/UTC" > /etc/timezone \
       &&   dpkg-reconfigure -f noninteractive tzdata
+    # && cd $WEBWORK_ROOT/htdocs \
+    #   && npm install
 
 ENV SSL=0 \
     PAPERSIZE=letter \
@@ -177,6 +191,10 @@ RUN cd $APP_ROOT/webwork2/conf \
 	PerlPassEnv WEBWORK_URL\n\
 	PerlPassEnv WEBWORK_ROOT_URL\n\
 	PerlPassEnv WEBWORK_DB_DSN\n\
+	PerlPassEnv WEBWORK_DB_DRIVER\n\
+	PerlPassEnv WEBWORK_DB_NAME\n\
+	PerlPassEnv WEBWORK_DB_HOST\n\
+	PerlPassEnv WEBWORK_DB_PORT\n\
 	PerlPassEnv WEBWORK_DB_USER\n\
 	PerlPassEnv WEBWORK_DB_PASSWORD\n\
 	PerlPassEnv WEBWORK_SMTP_SERVER\n\
