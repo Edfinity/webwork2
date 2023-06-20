@@ -1,6 +1,6 @@
 ###############################################################################
 # WeBWorK Online Homework Delivery System
-# Copyright &copy; 2000-2016 The WeBWorK Project, http://openwebwork.sf.net/
+# Copyright &copy; 2000-2022 The WeBWorK Project, https://github.com/openwebwork
 #
 # This program is free software; you can redistribute it and/or modify it under
 # the terms of either: (a) the GNU General Public License as published by the
@@ -29,28 +29,17 @@ use Carp;
 use WeBWorK::Debug;
 use DBI;
 use WeBWorK::CGI;
-use WeBWorK::Utils qw(formatDateTime grade_set grade_gateway grade_all_sets);
+use WeBWorK::Utils qw(formatDateTime);
 use WeBWorK::Localize;
 use WeBWorK::ContentGenerator::Instructor;
 use URI::Escape;
 use Net::OAuth;
-use constant MP2 => ( exists $ENV{MOD_PERL_API_VERSION} and $ENV{MOD_PERL_API_VERSION} >= 2 );
-
-use constant TIME_DIFF_THRESHOLD => 5; # seconds, threshold to report different between system time and oauth_timestamp time
 
 $Net::OAuth::PROTOCOL_VERSION = Net::OAuth::PROTOCOL_VERSION_1_0A;
 
-BEGIN {
-  if (MP2) {
-    require APR::SockAddr;
-    APR::SockAddr->import();
-    require Apache2::Connection;
-    Apache2::Connection->import();
-    require APR::Request::Error;
-    APR::Request::Error->import;
-  }
-}
-
+use APR::SockAddr;
+use Apache2::Connection;
+use APR::Request::Error;
 
 =head1 CONSTRUCTOR
 
@@ -149,8 +138,7 @@ sub get_credentials {
   my $curr_time = time();
   my $delta_time = $curr_time - $oauth_time;
   my $delta_min = (0.0 + $delta_time) / (60.0);
-  if ( $ce->{debug_lti_parameters} ||
-	 ( abs($delta_time) > TIME_DIFF_THRESHOLD ) ) {
+  if ( $ce->{debug_lti_parameters} ) {
     warn join("\n",
 	"============================",
 	"===== timestamp info =======",
@@ -246,6 +234,9 @@ sub get_credentials {
 
   # if we were able to set a user_id
   if ( defined($self->{user_id}) && $self->{user_id} ne "" ) {
+	# Make user_id lowercase for consistency in naming if configured.
+	$self->{user_id} = lc($self->{user_id}) if ($ce->{lti_lowercase_username});
+
       map {$self->{$_->[0]} = $r->param($_->[1]);}
 	(
 	 ['role', 'roles'],
@@ -809,9 +800,12 @@ sub ok {
     return 1;
   } else {
     # The nonce is in the database - so was used "recently" so should NOT be allowed
-    # Update timestamp - so deletion will be delayed from now and not from original timestamp.
-    $Key->timestamp($self->{"timestamp"});
-    $db->put($Key);
+    if ( $Key->timestamp <  $self->{"timestamp"} ) {
+      # Update timestamp - so deletion will be delayed from the most recent value
+      # of oauth_timestamp sent by the LTI consumer and not from an earlier timestamp.
+      $Key->timestamp($self->{"timestamp"});
+      $db->putKey($Key);
+    }
     return 0;
   }
 }
