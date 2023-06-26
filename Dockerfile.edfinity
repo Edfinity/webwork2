@@ -108,6 +108,8 @@ RUN apt-get update \
     libmoox-options-perl \
 	libjson-maybexs-perl \
 	libcpanel-json-xs-perl \
+	libyaml-libyaml-perl \
+	libemail-stuffer-perl \
 	make \
 	netpbm \
 	patch \
@@ -142,7 +144,7 @@ RUN apt-get update \
     && apt-get clean \
     && rm -fr /var/lib/apt/lists/* /tmp/*
 
-RUN cpanm install Devel::CheckLib Statistics::R::IO DBD::MariaDB SQL::Abstract::Classic \
+RUN cpanm install XS Devel::CheckLib Statistics::R::IO DBD::MariaDB SQL::Abstract::Classic \
   && rm -fr ./cpanm /root/.cpanm
 
 # ==================================================================
