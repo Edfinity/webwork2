@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env ruby
 
 # Script to build a working webwork2 docker image.
 #
@@ -10,45 +10,66 @@
 # mkdir webwork2-docker
 # mv webwork2 webwork2-docker
 # cd webwork2-docker
-# ./webwork2/docker-build.sh v99
+# ./webwork2/docker-build -p -v v99
 #
 # Note this will not checkout/pull MathJax or PG if the directories already
 # exist. If so, that's up to you.
 
-set -eo pipefail
+require 'optparse'
 
-BUILD_VERSION_TAG=$1
+if ARGV.empty?
+  puts "You'll need some args. Try '-h'."
+  exit
+end
 
-if [ -d .git/ ]; then
-  echo "This script should not be run from the webwork2/ directory. It should be run from one level up. See instructions."
-  exit 1
-fi
+options = {}
 
-if [ "$BUILD_VERSION_TAG" == "" ]; then
-  echo "specifiy build version tag as first arg: ./docker-build v99"
-  exit 1
-fi
+OptionParser.new do |opts|
+  opts.banner = "Usage: build [options]"
 
-# This probably won't matter unless you are not following the procedure outline
-# above for some reason
-WEBWORK2_GIT_URL=https://github.com/Edfinity/webwork2.git
-WEBWORK2_BRANCH=edfinity-docker
+  opts.on('-h', '--help', 'Print this') do
+    puts opts
+    exit
+  end
 
-# Set URL and branch of pg repository to use
-PG_GIT_URL=https://github.com/Edfinity/pg.git
-PG_BRANCH=master
+  opts.on('-c', '--clear-cache', 'Clear the docker cache before building') do
+    options[:clear_cache] = "--no-cache"
+  end
 
-if [ ! -d webwork2/ ]; then
-  echo "Cloning branch $WEBWORK2_BRANCH branch from $WEBWORK2_GIT_URL"
-  git clone --single-branch --branch ${WEBWORK2_BRANCH} --depth 1 $WEBWORK2_GIT_URL
-fi
-if [ ! -d pg/ ]; then
-  echo "Cloning branch $PG_BRANCH branch from $PG_GIT_URL"
-  git clone --single-branch --branch ${PG_BRANCH} --depth 1 $PG_GIT_URL
-fi
-if [ ! -d MathJax/ ]; then
-  echo "Cloning MathJax"
-  git clone --single-branch --branch legacy-v2 --depth 1 https://github.com/mathjax/MathJax
-fi
+  opts.on('-p', '--push', 'Push to AWS ECR') do
+    options[:push] = true
+  end
 
-docker build -t edfinity/webwork2:$BUILD_VERSION_TAG --platform linux/amd64 -f webwork2/Dockerfile .
+  opts.on('-v', '--version VERSION', 'Build version') do |v|
+    options[:version] = v
+  end
+end.parse!
+
+if options[:version].nil?
+  puts "You'll need to supply a build version"
+  exit
+end
+
+def clone_if_needed(repo, branch, url)
+  return if Dir.exists?(repo)
+
+  puts "Cloning branch #{branch} branch from #{url}"
+  system "git clone --single-branch --branch #{branch} --depth 1 #{url}"
+end
+
+clone_if_needed('webwork2', 'edfinity-docker', 'https://github.com/Edfinity/webwork2.git')
+clone_if_needed('pg', 'master', 'https://github.com/Edfinity/pg.git')
+clone_if_needed('MathJax', 'legacy-v2', 'https://github.com/mathjax/MathJax')
+
+repo_tag = "778618701612.dkr.ecr.us-east-1.amazonaws.com/webwork2:#{options[:version]}"
+local_tag = "edfinity/webwork2:#{options[:version]}"
+
+cmd = "docker build -t #{local_tag} -t #{repo_tag} #{options[:clear_cache]} --platform linux/amd64 -f webwork2/Dockerfile ."
+system cmd
+
+if options[:push]
+  puts "pushing #{repo_tag}"
+  system "docker push '#{repo_tag}'"
+end
+
+system "docker history #{local_tag}"

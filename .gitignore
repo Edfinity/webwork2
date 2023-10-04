@@ -35,3 +35,9 @@ DATA/*
 .dump_past_answers_salt
 .data
 .idea
+htdocs/node_modules/*
+htdocs/themes/*
+*.min.js
+*.min.css
+package-lock.json
+static-assets.json
