@@ -94,6 +94,7 @@ RUN apt-get update \
 	libtest-requires-perl \
 	libtest-mockobject-perl \
 	libtest-warn-perl \
+  libstatistics-r-io-perl \
 	libsub-uplevel-perl \
 	libtest-exception-perl \
 	libuniversal-can-perl \
