@@ -25,7 +25,7 @@ end
 options = {}
 
 OptionParser.new do |opts|
-  opts.banner = "Usage: build [options]"
+  opts.banner = 'Usage: build [options]'
 
   opts.on('-h', '--help', 'Print this') do
     puts opts
@@ -33,7 +33,7 @@ OptionParser.new do |opts|
   end
 
   opts.on('-c', '--clear-cache', 'Clear the docker cache before building') do
-    options[:clear_cache] = "--no-cache"
+    options[:clear_cache] = '--no-cache'
   end
 
   opts.on('-p', '--push', 'Push to AWS ECR') do
@@ -51,7 +51,7 @@ if options[:version].nil?
 end
 
 def clone_if_needed(repo, branch, url)
-  return if Dir.exists?(repo)
+  return if Dir.exist?(repo)
 
   puts "Cloning branch #{branch} branch from #{url}"
   system "git clone --single-branch --branch #{branch} --depth 1 #{url}"
