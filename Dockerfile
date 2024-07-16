@@ -126,10 +126,17 @@ RUN apt-get update \
 	lmodern \
 	zip \
 	jq \
+  texlive-plain-generic \
+  python3 \
+  python-is-python3 \
+  python3-pip \
   openssl \
   systemd \
+  texlive-fonts-recommended \
     && apt-get clean \
     && rm -fr /var/lib/apt/lists/* /tmp/*
+
+RUN pip3 install pretextbook
 
 RUN cpanm install Statistics::R::IO \
   && rm -fr ./cpanm /root/.cpanm
