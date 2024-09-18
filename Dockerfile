@@ -174,7 +174,7 @@ RUN cd $APP_ROOT/webwork2/conf \
     && a2dismod mpm_event \
     && a2enmod mpm_prefork \
     && sed -i -e 's/Timeout 300/Timeout 8/' /etc/apache2/apache2.conf \
-    && sed -i -e 's/TIMEOUT = 10;/TIMEOUT = 7;/' /opt/webwork/webwork2/lib/WeBWorK/Constants.pm \
+    && sed -i -e 's/TIMEOUT = 10;/TIMEOUT = $ENV{"WEBWORK_TIMEOUT"} \/\/ 7;/' /opt/webwork/webwork2/lib/WeBWorK/Constants.pm \
     && sed -i -e 's/MaxRequestWorkers     150/MaxRequestWorkers     20/' \
 	  -e 's/MaxConnectionsPerChild   0/MaxConnectionsPerChild   100/' \
 	  /etc/apache2/mods-available/mpm_prefork.conf \
@@ -198,3 +198,4 @@ ENTRYPOINT ["docker-entrypoint.sh"]
 # ================================================
 EXPOSE 80
 CMD ["apache2", "-DFOREGROUND"]
+
