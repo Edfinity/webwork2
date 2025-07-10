@@ -132,6 +132,7 @@ RUN apt-get update \
   python3-pip \
   openssl \
   systemd \
+  libmath-cephes-perl \
   texlive-fonts-recommended \
     && apt-get clean \
     && rm -fr /var/lib/apt/lists/* /tmp/*
