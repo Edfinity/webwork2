@@ -40,6 +40,10 @@ OptionParser.new do |opts|
     options[:push] = true
   end
 
+  opts.on('-V', '--verbose', 'Show all output while building') do
+    options[:verbose] = true
+  end
+
   opts.on('-v', '--version VERSION', 'Build version') do |v|
     options[:version] = v
   end
@@ -63,8 +67,9 @@ clone_if_needed('MathJax', 'legacy-v2', 'https://github.com/mathjax/MathJax')
 
 repo_tag = "778618701612.dkr.ecr.us-east-1.amazonaws.com/webwork2:#{options[:version]}"
 local_tag = "edfinity/webwork2:#{options[:version]}"
+progress_string = '--progress=plain ' if options[:verbose]
 
-cmd = "docker build -t #{local_tag} -t #{repo_tag} #{options[:clear_cache]} --platform linux/amd64 -f webwork2/Dockerfile ."
+cmd = "docker build #{progress_string} -t #{local_tag} -t #{repo_tag} #{options[:clear_cache]} --platform linux/amd64 -f webwork2/Dockerfile ."
 system cmd
 
 if options[:push]
