@@ -52,7 +52,8 @@ BEGIN{
 	use constant MP2 => ( exists $ENV{MOD_PERL_API_VERSION} and $ENV{MOD_PERL_API_VERSION} >= 2 );
 }
 # Problem processing will time out after this number of seconds.
-use constant TIMEOUT => $WeBWorK::PG::Local::TIMEOUT || 10;
+# Can be overridden per-request via translationOptions->{timeout_seconds}
+our $DEFAULT_TIMEOUT = $WeBWorK::PG::Local::TIMEOUT || 10;
 
 BEGIN {
 	# This safe compartment is used to read the large macro files such as
@@ -62,16 +63,18 @@ BEGIN {
 	$WeBWorK::PG::Local::safeCache = new WWSafe;
 }
 
-sub alarm_handler {
-	my $msg = "Timeout after processing this problem for ". TIMEOUT. " seconds. Check for infinite loops in problem source.\n";
-	warn $msg;
-	CORE::die $msg;
-}
-
 sub new {
 	my $invocant = shift;
-	local $SIG{ALRM} = \&alarm_handler;
-	alarm TIMEOUT;
+	my ($ce, $user, $key, $set, $problem, $psvn, $formFields, $translationOptions) = @_;
+
+	my $timeout = $translationOptions->{timeout_seconds} // $DEFAULT_TIMEOUT;
+
+	local $SIG{ALRM} = sub {
+		my $msg = "Timeout after processing this problem for $timeout seconds. Check for infinite loops in problem source.\n";
+		warn $msg;
+		CORE::die $msg;
+	};
+	alarm $timeout;
 	my $result = eval { $invocant->new_helper(@_) };
 	alarm 0;
 	die $@ if $@;
