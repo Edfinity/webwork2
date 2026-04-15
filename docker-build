@@ -1,9 +1,9 @@
-#!/usr/bin/env ruby
+#!/bin/bash
 
-# Script to build a working webwork2 docker image.
+# Build a working webwork2 docker image.
 #
 # HOW TO RUN:
-# to install the two dependencies from local filesystem, this needs to be run
+# To install the two dependencies from local filesystem, this needs to be run
 # from a parent directory, which you should create. And then run this script
 # from there. e.g.:
 #
@@ -15,66 +15,65 @@
 # Note this will not checkout/pull MathJax or PG if the directories already
 # exist. If so, that's up to you.
 
-require 'optparse'
+set -eo pipefail
 
-if ARGV.empty?
-  puts "You'll need some args. Try '-h'."
-  exit
-end
+usage() {
+  echo "Usage: ./webwork2/docker-build [options]"
+  echo
+  echo "Options:"
+  echo "  -h           Print this help"
+  echo "  -c           Clear the docker cache before building"
+  echo "  -p           Push to AWS ECR"
+  echo "  -V           Show all output while building"
+  echo "  -v VERSION   Build version (required)"
+  exit 1
+}
 
-options = {}
+CLEAR_CACHE=""
+PUSH=false
+VERBOSE=""
+VERSION=""
 
-OptionParser.new do |opts|
-  opts.banner = 'Usage: build [options]'
+while getopts "hcpVv:" opt; do
+  case $opt in
+    h) usage ;;
+    c) CLEAR_CACHE="--no-cache" ;;
+    p) PUSH=true ;;
+    V) VERBOSE="--progress=plain" ;;
+    v) VERSION="$OPTARG" ;;
+    *) usage ;;
+  esac
+done
 
-  opts.on('-h', '--help', 'Print this') do
-    puts opts
-    exit
-  end
+if [[ -z "$VERSION" ]]; then
+  echo "You'll need to supply a build version (-v VERSION)"
+  exit 1
+fi
 
-  opts.on('-c', '--clear-cache', 'Clear the docker cache before building') do
-    options[:clear_cache] = '--no-cache'
-  end
+clone_if_needed() {
+  local repo=$1 branch=$2 url=$3
+  if [[ ! -d "$repo" ]]; then
+    echo "Cloning branch $branch from $url"
+    git clone --single-branch --branch "$branch" --depth 1 "$url"
+  fi
+}
 
-  opts.on('-p', '--push', 'Push to AWS ECR') do
-    options[:push] = true
-  end
+clone_if_needed webwork2 edfinity-docker https://github.com/Edfinity/webwork2.git
+clone_if_needed pg       master          https://github.com/Edfinity/pg.git
+clone_if_needed MathJax  legacy-v2       https://github.com/mathjax/MathJax
 
-  opts.on('-V', '--verbose', 'Show all output while building') do
-    options[:verbose] = true
-  end
+REGION="us-east-1"
+ACCT_ID=778618701612
+TAG="$ACCT_ID.dkr.ecr.$REGION.amazonaws.com/webwork2:$VERSION"
 
-  opts.on('-v', '--version VERSION', 'Build version') do |v|
-    options[:version] = v
-  end
-end.parse!
+echo "Building $TAG"
+finch build $VERBOSE -t "$TAG" $CLEAR_CACHE --platform linux/amd64 -f webwork2/Dockerfile .
 
-if options[:version].nil?
-  puts "You'll need to supply a build version"
-  exit
-end
+if [[ "$PUSH" == true ]]; then
+  aws --profile edfinity ecr get-login-password --region "$REGION" \
+    | finch login --username AWS --password-stdin "$ACCT_ID.dkr.ecr.$REGION.amazonaws.com"
+  echo "Pushing $TAG"
+  finch push "$TAG"
+fi
 
-def clone_if_needed(repo, branch, url)
-  return if Dir.exist?(repo)
-
-  puts "Cloning branch #{branch} branch from #{url}"
-  system "git clone --single-branch --branch #{branch} --depth 1 #{url}"
-end
-
-clone_if_needed('webwork2', 'edfinity-docker', 'https://github.com/Edfinity/webwork2.git')
-clone_if_needed('pg', 'master', 'https://github.com/Edfinity/pg.git')
-clone_if_needed('MathJax', 'legacy-v2', 'https://github.com/mathjax/MathJax')
-
-repo_tag = "778618701612.dkr.ecr.us-east-1.amazonaws.com/webwork2:#{options[:version]}"
-local_tag = "edfinity/webwork2:#{options[:version]}"
-progress_string = '--progress=plain ' if options[:verbose]
-
-cmd = "docker build #{progress_string} -t #{local_tag} -t #{repo_tag} #{options[:clear_cache]} --platform linux/amd64 -f webwork2/Dockerfile ."
-system cmd
-
-if options[:push]
-  puts "pushing #{repo_tag}"
-  system "docker push '#{repo_tag}'"
-end
-
-system "docker history #{local_tag}"
+finch history "$TAG"
