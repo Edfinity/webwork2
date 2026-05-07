@@ -211,12 +211,14 @@ sub new_helper {
 		},
 	);
 	$translator->environment($envir);
-	
+	my $t_after_translator = Time::HiRes::time();
+
 	############################################################################
 	# initialize the Translator
 	############################################################################
 	#warn "PG: initializing the Translator\n";
 	$translator->initialize();
+	my $t_after_initialize = Time::HiRes::time();
 	
 	
 	############################################################################
@@ -338,9 +340,12 @@ EOF
 			flags      => {error_flag => 1},
 			pgcore     => $translator->{rh_pgcore},
 			_render_timings => {
-				setup_ms     => ($t_setup_end - $t_render_start) * 1000,
-				translate_ms => undef,
-				answers_ms   => undef,
+				setup_ms              => ($t_setup_end        - $t_render_start)     * 1000,
+				setup_translator_ms   => ($t_after_translator - $t_render_start)     * 1000,
+				setup_initialize_ms   => ($t_after_initialize - $t_after_translator) * 1000,
+				setup_load_ms         => ($t_setup_end        - $t_after_initialize) * 1000,
+				translate_ms          => undef,
+				answers_ms            => undef,
 			},
 		}, $class;
 	}
@@ -493,9 +498,12 @@ EOF
 		flags      => $translator->rh_flags,
 		pgcore     => $translator->{rh_pgcore},
 		_render_timings => {
-			setup_ms     => ($t_setup_end     - $t_render_start)  * 1000,
-			translate_ms => ($t_translate_end - $t_setup_end)     * 1000,
-			answers_ms   => ($t_answers_end   - $t_translate_end) * 1000,
+			setup_ms              => ($t_setup_end        - $t_render_start)     * 1000,
+			setup_translator_ms   => ($t_after_translator - $t_render_start)     * 1000,
+			setup_initialize_ms   => ($t_after_initialize - $t_after_translator) * 1000,
+			setup_load_ms         => ($t_setup_end        - $t_after_initialize) * 1000,
+			translate_ms          => ($t_translate_end    - $t_setup_end)        * 1000,
+			answers_ms            => ($t_answers_end      - $t_translate_end)    * 1000,
 		},
 	}, $class;
 }
