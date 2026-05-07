@@ -39,6 +39,7 @@ use strict;
 use warnings;
 use WeBWorK::Constants;
 use File::Path qw(rmtree);
+use Time::HiRes ();
 use WeBWorK::PG::Translator;
 use WeBWorK::Utils qw(readFile writeTimingLogEntry);
 #use WeBWorK::Utils::RestrictedMailer;
@@ -97,7 +98,9 @@ sub new_helper {
 		                     # translator, such as whether to show
 		                     # hints and the display mode to use
 	) = @_;
-	
+
+	my $t_render_start = Time::HiRes::time();
+
 	# write timing log entry
 # 	writeTimingLogEntry($ce, "WeBWorK::PG::new",
 # 		"user=".$user->user_id.",problem=".$ce->{courseName}."/".$set->set_id."/".$problem->problem_id.",mode=".$translationOptions->{displayMode},
@@ -316,14 +319,15 @@ sub new_helper {
     
 	eval { $translator->source_string( $source ) } unless $readErrors;
 	$readErrors .="\n  $@ " if $@;
+	my $t_setup_end = Time::HiRes::time();
 	if ($readErrors) {
 		# well, we couldn't get the problem source, for some reason.
 		return bless {
 			translator => $translator,
-			head_text  => "", 
+			head_text  => "",
 			post_header_text => "",
 			body_text  => <<EOF,
-WeBWorK::Utils::readFile($sourceFilePath) says: 
+WeBWorK::Utils::readFile($sourceFilePath) says:
 $@
 EOF
 			answers    => {},
@@ -333,6 +337,11 @@ EOF
 			warnings   => "$warnings",
 			flags      => {error_flag => 1},
 			pgcore     => $translator->{rh_pgcore},
+			_render_timings => {
+				setup_ms     => ($t_setup_end - $t_render_start) * 1000,
+				translate_ms => undef,
+				answers_ms   => undef,
+			},
 		}, $class;
 	}
 	
@@ -357,6 +366,7 @@ EOF
 	
 	#warn "PG: translating the PG source into text\n";
 	$translator->translate();
+	my $t_translate_end = Time::HiRes::time();
 	
 	############################################################################
 	# !!!!!!!! IMPORTANT: $envir shouldn't be trusted after problem code runs!
@@ -468,6 +478,8 @@ EOF
 	# the translation process. 
 	############################################################################
 	
+	my $t_answers_end = Time::HiRes::time();
+
 	return bless {
 		translator => $translator,
 		head_text  => ${ $translator->r_header },
@@ -480,6 +492,11 @@ EOF
 		warnings   => $warnings,
 		flags      => $translator->rh_flags,
 		pgcore     => $translator->{rh_pgcore},
+		_render_timings => {
+			setup_ms     => ($t_setup_end     - $t_render_start)  * 1000,
+			translate_ms => ($t_translate_end - $t_setup_end)     * 1000,
+			answers_ms   => ($t_answers_end   - $t_translate_end) * 1000,
+		},
 	}, $class;
 }
 
