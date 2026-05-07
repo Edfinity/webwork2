@@ -346,6 +346,7 @@ EOF
 				setup_load_ms         => ($t_setup_end        - $t_after_initialize) * 1000,
 				translate_ms          => undef,
 				answers_ms            => undef,
+				%{ $translator->{_init_timings} || {} },
 			},
 		}, $class;
 	}
@@ -504,6 +505,7 @@ EOF
 			setup_load_ms         => ($t_setup_end        - $t_after_initialize) * 1000,
 			translate_ms          => ($t_translate_end    - $t_setup_end)        * 1000,
 			answers_ms            => ($t_answers_end      - $t_translate_end)    * 1000,
+			%{ $translator->{_init_timings} || {} },
 		},
 	}, $class;
 }
