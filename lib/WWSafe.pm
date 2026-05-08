@@ -255,10 +255,10 @@ sub share_from {
 			  : croak(qq(Can't share "$type$var" of unknown type));
 	push @timings, [$arg, (Time::HiRes::time() - $t0) * 1000] if $profile;
     }
-    if ($profile && @timings) {
+    if ($profile && @timings && @timings >= 50) {
 	my $total_ms = (Time::HiRes::time() - $loop_start) * 1000;
 	my @sorted = sort { $b->[1] <=> $a->[1] } @timings;
-	my $top_n = @sorted < 5 ? @sorted : 5;
+	my $top_n = @sorted < 10 ? @sorted : 10;
 	my @top = @sorted[0 .. $top_n - 1];
 	my $top_str = join(',', map { sprintf('%s:%.3f', $_->[0], $_->[1]) } @top);
 	warn sprintf("SHARE_FROM_TIMING: pid=%d pkg=%s n=%d total_ms=%.2f top%d=[%s]",
