@@ -27,6 +27,7 @@ sub lexless_anon_sub {
 }
 
 use Carp;
+use Time::HiRes ();
 BEGIN { eval q{
     use Carp::Heavy;
 } }
@@ -236,11 +237,15 @@ sub share_from {
     croak("Package \"$pkg\" does not exist")
 	unless keys %{"$pkg\::"};
     my $arg;
+    my $profile = $ENV{WWSAFE_PROFILE_SHARE_FROM};
+    my @timings;
+    my $loop_start = $profile ? Time::HiRes::time() : 0;
     foreach $arg (@$vars) {
 	# catch some $safe->share($var) errors:
 	my ($var, $type);
 	$type = $1 if ($var = $arg) =~ s/^(\W)//;
 	# warn "share_from $pkg $type $var";
+	my $t0 = $profile ? Time::HiRes::time() : 0;
 	*{$root."::$var"} = (!$type)       ? \&{$pkg."::$var"}
 			  : ($type eq '&') ? \&{$pkg."::$var"}
 			  : ($type eq '$') ? \${$pkg."::$var"}
@@ -248,6 +253,16 @@ sub share_from {
 			  : ($type eq '%') ? \%{$pkg."::$var"}
 			  : ($type eq '*') ?  *{$pkg."::$var"}
 			  : croak(qq(Can't share "$type$var" of unknown type));
+	push @timings, [$arg, (Time::HiRes::time() - $t0) * 1000] if $profile;
+    }
+    if ($profile && @timings) {
+	my $total_ms = (Time::HiRes::time() - $loop_start) * 1000;
+	my @sorted = sort { $b->[1] <=> $a->[1] } @timings;
+	my $top_n = @sorted < 5 ? @sorted : 5;
+	my @top = @sorted[0 .. $top_n - 1];
+	my $top_str = join(',', map { sprintf('%s:%.3f', $_->[0], $_->[1]) } @top);
+	warn sprintf("SHARE_FROM_TIMING: pid=%d pkg=%s n=%d total_ms=%.2f top%d=[%s]",
+	    $$, $pkg, scalar(@$vars), $total_ms, $top_n, $top_str);
     }
     $obj->share_record($pkg, $vars) unless $no_record or !$vars;
 }
