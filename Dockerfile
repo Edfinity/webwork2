@@ -140,8 +140,6 @@ RUN printf 'path-exclude /usr/share/doc/*\npath-include /usr/share/doc/*/copyrig
     && apt-get clean \
     && rm -fr /var/lib/apt/lists/* /tmp/*
 
-RUN pip3 install pretextbook
-
 RUN cpanm install Statistics::R::IO \
   && rm -fr ./cpanm /root/.cpanm
 
