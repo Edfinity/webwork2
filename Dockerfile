@@ -28,7 +28,12 @@ ENV WEBWORK_ROOT=$APP_ROOT/webwork2 \
     PATH=$PATH:$APP_ROOT/webwork2/bin
 
 # ==================================================================
-RUN apt-get update \
+# Strip docs/man/info pages from this image. Honored by dpkg for any package
+# installed AFTER this file is written, so it must precede the apt-get
+# install below. Keep copyright files for license-compliance.
+RUN printf 'path-exclude /usr/share/doc/*\npath-include /usr/share/doc/*/copyright\npath-exclude /usr/share/man/*\npath-exclude /usr/share/info/*\n' \
+      > /etc/dpkg/dpkg.cfg.d/01_nodoc \
+    && apt-get update \
     && apt-get install -y --no-install-recommends --no-install-suggests \
 	apache2 \
 	curl \
@@ -126,12 +131,10 @@ RUN apt-get update \
 	lmodern \
 	zip \
 	jq \
-  texlive-plain-generic \
   python3 \
   python-is-python3 \
   python3-pip \
   openssl \
-  systemd \
   libmath-cephes-perl \
   texlive-fonts-recommended \
     && apt-get clean \
@@ -156,6 +159,8 @@ RUN echo "PATH=$PATH:$APP_ROOT/webwork2/bin" >> /root/.bashrc \
       && chmod -R u+w DATA ../courses  htdocs/applets logs tmp $APP_ROOT/pg/lib/chromatic   \
     && echo "en_US ISO-8859-1\nen_US.UTF-8 UTF-8" > /etc/locale.gen \
       && /usr/sbin/locale-gen \
+      && find /usr/share/locale -mindepth 1 -maxdepth 1 -type d \
+           ! -name 'en' ! -name 'en_US' -exec rm -rf {} + \
       && echo "locales locales/default_environment_locale select en_US.UTF-8\ndebconf debconf/frontend select Noninteractive" > /tmp/preseed.txt \
       && debconf-set-selections /tmp/preseed.txt \
     && rm /etc/localtime /etc/timezone && echo "Etc/UTC" > /etc/timezone \
