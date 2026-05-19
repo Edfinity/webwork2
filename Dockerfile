@@ -115,8 +115,6 @@ RUN printf 'path-exclude /usr/share/doc/*\npath-include /usr/share/doc/*/copyrig
 	texlive-plain-generic \
 	texlive-xetex \
 	texlive-latex-recommended \
-	texlive-lang-other \
-	texlive-lang-arabic \
 	libc6-dev \
 	git \
 	mysql-client \
