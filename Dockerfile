@@ -137,8 +137,6 @@ RUN apt-get update \
     && apt-get clean \
     && rm -fr /var/lib/apt/lists/* /tmp/*
 
-RUN pip3 install pretextbook
-
 RUN cpanm install Statistics::R::IO \
   && rm -fr ./cpanm /root/.cpanm
 
