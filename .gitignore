@@ -41,3 +41,4 @@ htdocs/themes/*
 *.min.css
 package-lock.json
 static-assets.json
+.DS_Store
